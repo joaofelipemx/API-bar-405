@@ -1,6 +1,11 @@
-def main():
-    print("Hello from bar405-api!")
+from fastapi import FastAPI
+from routers import categoria
+
+app = FastAPI(title="Bar 405 API")
+
+app.include_router(categoria.router)
 
 
-if __name__ == "__main__":
-    main()
+@app.get("/")
+def raiz():
+    return {"mensagem": "Bar 405 API rodando!"}

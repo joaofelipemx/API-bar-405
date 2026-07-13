@@ -26,6 +26,7 @@ class ProdutoCreate(BaseModel):
     preco: float
     estoque: int
     categoria_id: int
+
 class ProdutoResponse(BaseModel):
     id: int
     nome: str

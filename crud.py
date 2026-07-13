@@ -71,3 +71,45 @@ async def deletar_cliente(db: AsyncSession, cliente_id: int):
     await db.delete(cliente)
     await db.commit()
     return cliente
+
+
+
+#PRODUTO
+async def criar_produto(db: AsyncSession, produto: schemas.ProdutoCreate):
+    categoria = await buscar_categoria(db, produto.categoria_id)
+    if categoria is None:
+        return None
+    novo_produto = models.Produto(**produto.model_dump())
+    db.add(novo_produto)
+    await db.commit()
+    await db.refresh(novo_produto)
+    return novo_produto
+async def listar_produtos(db: AsyncSession):
+    result = await db.execute(select(models.Produto))
+    return result.scalars().all()
+async def buscar_produto(db: AsyncSession, produto_id: int):
+    result = await db.execute(
+        select(models.Produto).where(models.Produto.id == produto_id)
+    )
+    return result.scalar_one_or_none()
+async def atualizar_produto(db: AsyncSession, produto_id: int, dados: schemas.ProdutoCreate):
+    produto = await buscar_produto(db, produto_id)
+    if produto is None:
+        return None
+    categoria = await buscar_categoria(db, dados.categoria_id)
+    if categoria is None:
+        return "Categoria inválida"
+    produto.nome = dados.nome
+    produto.estoque = dados.estoque
+    produto.preco = dados.preco
+    produto.categoria_id = dados.categoria_id
+    await db.commit()
+    await db.refresh(produto)
+    return produto
+async def deletar_produto(db: AsyncSession, produto_id: int):
+    produto = await buscar_produto(db, produto_id)
+    if produto is None:
+        return None
+    await db.delete(produto)
+    await db.commit()
+    return produto

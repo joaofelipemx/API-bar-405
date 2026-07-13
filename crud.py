@@ -113,3 +113,42 @@ async def deletar_produto(db: AsyncSession, produto_id: int):
     await db.delete(produto)
     await db.commit()
     return produto
+
+#PEDIDOS
+async def criar_pedido(db: AsyncSession, pedido: schemas.PedidoCreate):
+    novo_pedido = models.Pedido(**pedido.model_dump())
+    cliente = await buscar_cliente(db, novo_pedido.cliente_id)
+    if cliente is None:
+        return None
+    db.add(novo_pedido)
+    await db.commit()
+    await db.refresh(novo_pedido)
+    return novo_pedido
+async def listar_pedidos(db: AsyncSession):
+    result = await db.execute(select(models.Pedido))
+    return result.scalars().all()
+async def buscar_pedido(db: AsyncSession, pedido_id: int):
+    result = await db.execute(
+        select(models.Pedido).where(models.Pedido.id == pedido_id)
+    )
+    return result.scalar_one_or_none()
+async def atualizar_pedido(db: AsyncSession, pedido_id: int, dados: schemas.PedidoCreate):
+    pedido = await buscar_pedido(db, pedido_id)
+    if pedido is None:
+        return None
+    cliente = await buscar_cliente(db, dados.cliente_id)
+    if cliente is None:
+        return "cliente invalido"
+    pedido.cliente_id = dados.cliente_id
+    pedido.data = dados.data
+    pedido.status = dados.status
+    await db.commit()
+    await db.refresh(pedido)
+    return pedido
+async def deletar_pedido(db: AsyncSession, pedido_id: int):
+    pedido = await buscar_pedido(db, pedido_id)
+    if pedido is None:
+        return None
+    await db.delete(pedido)
+    await db.commit()
+    return pedido

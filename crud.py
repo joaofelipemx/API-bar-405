@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import models
 import schemas
+from security import hash_senha, verificar_senha
 
 # CATEGORIA
 async def criar_categoria(db: AsyncSession, categoria: schemas.CategoriaCreate):
@@ -152,3 +153,69 @@ async def deletar_pedido(db: AsyncSession, pedido_id: int):
     await db.delete(pedido)
     await db.commit()
     return pedido
+
+
+#ItemPedido
+async def criar_item_pedido(db: AsyncSession, item_pedido: schemas.ItemPedidoCreate):
+    novo_item = models.ItemPedido(**item_pedido.model_dump())
+    pedido = await buscar_pedido(db, novo_item.pedido_id)
+    if pedido is None:
+        return "pedido invalido"
+    produto = await buscar_produto(db, novo_item.produto_id)
+    if produto is None:
+        return "produto invalido"
+    db.add(novo_item)
+    await db.commit()
+    await db.refresh(novo_item)
+    return novo_item
+async def listar_itens_pedido(db: AsyncSession):
+    result = await db.execute(select(models.ItemPedido))
+    return result.scalars().all()
+async def buscar_item_pedido(db: AsyncSession, item_id: int):
+    item = await db.execute(
+        select(models.ItemPedido).where(models.ItemPedido.id == item_id)
+    )
+    return item.scalar_one_or_none()
+async def atualizar_item_pedido(db: AsyncSession, item_id: int, dados: schemas.ItemPedidoCreate):
+    item_pedido = await buscar_item_pedido(db, item_id)
+    if item_pedido is None:
+        return None
+    pedido = await buscar_pedido(db, dados.pedido_id)
+    if pedido is None:
+        return "pedido invalido"
+    produto = await buscar_produto(db, dados.produto_id)
+    if produto is None:
+        return "produto invalido"
+    item_pedido.pedido_id = dados.pedido_id
+    item_pedido.produto_id = dados.produto_id
+    item_pedido.quantidade = dados.quantidade
+    item_pedido.preco_unitario = dados.preco_unitario
+    await db.commit()
+    await db.refresh(item_pedido)
+    return item_pedido
+async def deletar_item_pedido(db: AsyncSession, item_id: int):
+    item_pedido = await buscar_item_pedido(db, item_id)
+    if item_pedido is None:
+        return None
+    await db.delete(item_pedido)
+    await db.commit()
+    return item_pedido
+
+
+#USUARIO
+async def criar_usuario(db: AsyncSession, usuario: schemas.UsuarioCreate):
+    senha_hash = hash_senha(usuario.password)
+    novo_usuario = models.Usuario(
+        username=usuario.username,
+        email=usuario.email,
+        password_hash=senha_hash
+    )
+    db.add(novo_usuario)
+    await db.commit()
+    await db.refresh(novo_usuario)
+    return novo_usuario
+async def buscar_usuario_por_username(db: AsyncSession, username: str):
+    resultado = await db.execute(
+        select(models.Usuario).where(models.Usuario.username == username)
+    )
+    return resultado.scalar_one_or_none()
